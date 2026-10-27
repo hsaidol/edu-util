@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>투명 서명 및 도장 이미지 생성기</title>
+    
+    <!-- 구글 웹 폰트 로드 -->
+    <link href="https://fonts.googleapis.com/css2?family=Gamja+Flower&family=Hi+Melody&family=Nanum+Brush+Script&family=Nanum+Pen+Script&family=Single+Day&family=Gowun+Batang:wght@700&family=Noto+Serif+KR:wght@700&family=Song+Myung&display=swap" rel="stylesheet">
+    
+    <style>
+        /* 안정적인 CDN(눈누) 주소와 폰트명으로 정확하게 수정된 폰트들 (오류 폰트 2종 삭제) */
+        @font-face { font-family: 'PermanentSnow'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2508-2@1.0/PermanentSnow.woff2') format('woff2'); }
+        @font-face { font-family: 'Yuseol'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2508-2@1.0/YooSeol.woff2') format('woff2'); }
+        @font-face { font-family: 'ImHyeMin'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2106@1.1/IM_Hyemin-Bold.woff2') format('woff'); }
+        @font-face { font-family: 'Ownglyph_meetme-Rg'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2402_1@1.0/Ownglyph_meetme-Rg.woff2') format('woff2'); }
+        @font-face { font-family: 'InkLipquid'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_one@1.0/InkLipquid.woff') format('woff'); }
+        @font-face { font-family: 'OmuDaye'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2304-01@1.0/omyu_pretty.woff2') format('woff2'); }
+        @font-face { font-family: 'LeeSeoyun'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2202-2@1.0/LeeSeoyun.woff') format('woff'); }
+
+        body { font-family: 'Noto Sans KR', sans-serif; padding: 20px; max-width: 800px; margin: auto; background-color: #f7f9fc; }
+        .container { background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1, h2 { color: #333; }
+        .input-group { margin-bottom: 20px; }
+        input[type="text"] { padding: 10px; font-size: 18px; width: 200px; border: 1px solid #ccc; border-radius: 6px; }
+        select { padding: 8px; font-size: 15px; border: 1px solid #ccc; border-radius: 6px; margin-right: 5px; margin-bottom: 10px;}
+        .section { margin-top: 30px; padding: 20px; border: 1px solid #eee; border-radius: 8px; background: #fafafa; }
+        
+        canvas { 
+            border: 1px dashed #bbb; 
+            background-image: linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%, #eee), linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%, #eee); 
+            background-size: 10px 10px; 
+            background-position: 0 0, 5px 5px; 
+            margin: 15px 0; 
+            display: block; 
+        }
+        #sigCanvas { width: 170px; }
+        #stampCanvas { width: 80px; }
+        
+        button { padding: 10px 20px; font-size: 16px; background-color: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        .warning { color: red; font-size: 14px; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>투명 서명 및 도장 이미지 생성기<span style="font-size:14px; color:#666;">(한글/워드 바로 복붙!)</span></h1>
+    
+    <div class="input-group">
+        <label for="userName"><strong>이름 입력: </strong></label>
+        <input type="text" id="userName" placeholder="이름을 입력하세요" maxlength="4" oninput="updateAll()">
+        <span id="nameWarning" class="warning">도장은 2~3글자 이름에 최적화되어 있습니다.</span>
+    </div>
+
+    <!-- 1. 서명 스타일 영역 -->
+    <div class="section">
+        <h2>1. 서명 스타일 (22mm x 7.6mm)</h2>
+        <div>
+            <select id="sigFont" onchange="drawSignature()">
+                <!-- 구글 웹 폰트 -->
+                <option value="'Nanum Pen Script'">나눔 펜 스크립트</option>
+                <option value="'Nanum Brush Script'">나눔 브러쉬 스크립트</option>
+                <option value="'Gamja Flower'">감자꽃 마을</option>
+                <option value="'Hi Melody'">하이 멜로디</option>
+                <option value="'Single Day'">싱글 데이</option>
+                <!-- 무료 폰트 옵션들 -->
+                <option value="'PermanentSnow'">만년설체</option>
+                <option value="'Yuseol'">유설체</option>
+                <option value="'ImHyeMin'">IM혜민체</option>
+                <option value="'Ownglyph_meetme-Rg'">온글잎 밑미</option>
+                <option value="'InkLipquid'">잉크립퀴드</option>
+                <option value="'OmuDaye'">오뮤 다예쁨체</option>
+                <option value="'LeeSeoyun'">이서윤체</option>
+            </select>
+        </div>
+        <canvas id="sigCanvas"></canvas>
+        <button onclick="downloadImage('sigCanvas', 'signature.png')">서명 PNG 저장</button>
+    </div>
+
+    <!-- 2. 도장 스타일 영역 -->
+    <div class="section">
+        <h2>2. 도장 스타일</h2>
+        <div>
+            <select id="stampShape" onchange="handleShapeChange()">
+                <option value="circle">옵션1) 동그란 모양 (11mm x 11mm)</option>
+                <option value="oval">옵션2) 타원 모양 (9mm x 11mm)</option>
+            </select>
+            <select id="stampFont" onchange="drawStamp()">
+                <option value="'Noto Serif KR'">노토 명조</option>
+                <option value="'Gowun Batang'">고운 바탕</option>
+                <option value="'Song Myung'">송명</option>
+                <option value="'HY목각파임B'">HY목각파임B</option>
+                <option value="'휴먼엑스포'">휴먼엑스포</option>
+                <option value="'HY견명조'">HY견명조</option>
+                <option value="'휴먼옛체'">휴먼옛체</option>
+            </select>
+            <select id="stampColor" onchange="drawStamp()">
+                <option value="#d32f2f">빨간색</option>
+                <option value="#000000">검정색</option>
+                <option value="#1a237e">짙은 군청색</option>
+                <option value="#7b1fa2">보라색</option>
+            </select>
+        </div>
+        <p id="shapeWarning" class="warning">이름이 2글자인 경우 타원 모양만 제공됩니다.</p>
+        <canvas id="stampCanvas"></canvas>
+        <button onclick="downloadImage('stampCanvas', 'stamp.png')">도장 PNG 저장</button>
+    </div>
+</div>
+
+<!-- 폰트 강제 다운로드를 위한 보이지 않는 텍스트 영역 -->
+<div style="position: absolute; width: 0; height: 0; overflow: hidden; visibility: hidden;">
+    <span style="font-family: 'PermanentSnow';">만</span>
+    <span style="font-family: 'Yuseol';">유</span>
+    <span style="font-family: 'ImHyeMin';">혜</span>
+    <span style="font-family: 'Ownglyph_meetme-Rg';">밑</span>
+    <span style="font-family: 'InkLipquid';">잉</span>
+    <span style="font-family: 'OmuDaye';">오</span>
+    <span style="font-family: 'LeeSeoyun';">이</span>
+</div>
+
+<script>
+    const PX_PER_MM = 11.811;
+
+    document.fonts.ready.then(() => { updateAll(); });
+
+    function updateAll() {
+        drawSignature();
+        handleShapeChange(); 
+    }
+
+    function handleShapeChange() {
+        const name = document.getElementById('userName').value.trim();
+        const shapeSelect = document.getElementById('stampShape');
+        const shapeWarning = document.getElementById('shapeWarning');
+        const nameWarning = document.getElementById('nameWarning');
+
+        if (name.length !== 2 && name.length !== 3 && name.length > 0) {
+            nameWarning.style.display = 'inline';
+        } else {
+            nameWarning.style.display = 'none';
+        }
+
+        if (name.length === 2) {
+            shapeSelect.value = 'oval';
+            shapeSelect.disabled = true;
+            shapeWarning.style.display = 'block';
+        } else {
+            shapeSelect.disabled = false;
+            shapeWarning.style.display = 'none';
+        }
+        drawStamp();
+    }
+
+    async function drawSignature() {
+        const canvas = document.getElementById('sigCanvas');
+        const ctx = canvas.getContext('2d');
+        const name = document.getElementById('userName').value.trim() || '홍길동';
+        const font = document.getElementById('sigFont').value;
+
+        try {
+            await document.fonts.load(`80px ${font}`, name);
+        } catch (e) {
+            console.log("폰트 로드 에러:", e);
+        }
+
+        canvas.width = Math.round(22 * PX_PER_MM);  
+        canvas.height = Math.round(7.6 * PX_PER_MM); 
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#000000';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // 폰트별 잘림 현상 예외 처리 (크기 및 y축 기준점 보정)
+        let maxFontSize = 80;
+        let yOffset = 5; // 기본 y축 보정값
+
+        if (font.includes('PermanentSnow')) {
+            // 만년설체: 위가 잘리므로 크기를 줄이고 기준점을 약간 아래로 내림
+            maxFontSize = 62;
+            yOffset = 15;
+        } else if (font.includes('InkLipquid')) {
+            // 잉크립퀴드: 아래가 잘리므로 크기를 줄이고 기준점을 약간 위로 올림
+            maxFontSize = 62;
+            yOffset = -5;
+        }
+
+        let fontSize = maxFontSize;
+        ctx.font = `${fontSize}px ${font}`;
+        
+        // 글자가 길 경우 영역에 맞게 폰트 크기 동적 축소
+        while (ctx.measureText(name).width > canvas.width - 15) {
+            fontSize -= 2;
+            ctx.font = `${fontSize}px ${font}`;
+        }
+        
+        // 보정된 yOffset을 더하여 텍스트 그리기
+        ctx.fillText(name, canvas.width / 2, canvas.height / 2 + yOffset);
+    }
+
+    async function drawStamp() {
+        const canvas = document.getElementById('stampCanvas');
+        const ctx = canvas.getContext('2d');
+        const name = document.getElementById('userName').value.trim() || '홍길동';
+        const shape = document.getElementById('stampShape').value;
+        const font = document.getElementById('stampFont').value;
+        const color = document.getElementById('stampColor').value;
+        const textToLoad = name + "인"; 
+
+        try {
+            await document.fonts.load(`50px ${font}`, textToLoad);
+        } catch (e) {
+            console.log("폰트 로드 에러:", e);
+        }
+
+        if (shape === 'circle') {
+            canvas.width = Math.round(11 * PX_PER_MM);  
+            canvas.height = Math.round(11 * PX_PER_MM); 
+        } else {
+            canvas.width = Math.round(9 * PX_PER_MM);   
+            canvas.height = Math.round(11 * PX_PER_MM);
+        }
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = 4.5; 
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2;
+
+        if (shape === 'circle') {
+            const radius = cx - ctx.lineWidth;
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            if (name.length === 3) {
+                const fontSize = 46; 
+                ctx.font = `bold ${fontSize}px ${font}`;
+                ctx.fillText(name[0] + name[1], cx, cy - 24); 
+                ctx.fillText(name[2] + "인", cx, cy + 24);
+            }
+        } else if (shape === 'oval') {
+            const rx = cx - ctx.lineWidth;
+            const ry = cy - ctx.lineWidth;
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+            ctx.stroke();
+
+            if (name.length === 3) {
+                const fontSize = 42;
+                ctx.font = `bold ${fontSize}px ${font}`;
+                ctx.fillText(name[0], cx, cy - 40);
+                ctx.fillText(name[1], cx, cy);
+                ctx.fillText(name[2], cx, cy + 40);
+            } else if (name.length === 2) {
+                const fontSize = 50;
+                ctx.font = `bold ${fontSize}px ${font}`;
+                ctx.fillText(name[0], cx, cy - 26);
+                ctx.fillText(name[1], cx, cy + 26);
+            }
+        }
+    }
+
+    function downloadImage(canvasId, filename) {
+        const canvas = document.getElementById(canvasId);
+        const dataUrl = canvas.toDataURL('image/png');
+        const highResDataUrl = changeDpiDataUrl(dataUrl, 300);
+        
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = highResDataUrl;
+        link.click();
+    }
+
+    function changeDpiDataUrl(base64Image, dpi) {
+        const data = atob(base64Image.split(',')[1]);
+        const dataArray = new Uint8Array(data.length);
+        for (let i = 0; i < data.length; i++) {
+            dataArray[i] = data.charCodeAt(i);
+        }
+        
+        const physChunk = createPhysChunk(dpi);
+        let ihdrEnd = 33; 
+        
+        const newArray = new Uint8Array(dataArray.length + physChunk.length);
+        newArray.set(dataArray.subarray(0, ihdrEnd), 0);
+        newArray.set(physChunk, ihdrEnd);
+        newArray.set(dataArray.subarray(ihdrEnd), ihdrEnd + physChunk.length);
+        
+        let binary = '';
+        for (let i = 0; i < newArray.length; i++) {
+            binary += String.fromCharCode(newArray[i]);
+        }
+        return 'data:image/png;base64,' + btoa(binary);
+    }
+
+    function createPhysChunk(dpi) {
+        const ppm = Math.round(dpi / 0.0254);
+        const chunk = new Uint8Array(21);
+        chunk[0] = 0; chunk[1] = 0; chunk[2] = 0; chunk[3] = 9; 
+        chunk[4] = 112; chunk[5] = 72; chunk[6] = 89; chunk[7] = 115; 
+        chunk[8] = (ppm >>> 24) & 255; chunk[9] = (ppm >>> 16) & 255; chunk[10] = (ppm >>> 8) & 255; chunk[11] = ppm & 255;
+        chunk[12] = (ppm >>> 24) & 255; chunk[13] = (ppm >>> 16) & 255; chunk[14] = (ppm >>> 8) & 255; chunk[15] = ppm & 255;
+        chunk[16] = 1; 
+        
+        const crcTable = new Uint32Array(256);
+        for (let i = 0; i < 256; i++) {
+            let c = i;
+            for (let j = 0; j < 8; j++) {
+                c = ((c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1));
+            }
+            crcTable[i] = c;
+        }
+        let crc = 0xFFFFFFFF;
+        for (let i = 4; i < 17; i++) {
+            crc = crcTable[(crc ^ chunk[i]) & 0xFF] ^ (crc >>> 8);
+        }
+        crc = crc ^ 0xFFFFFFFF;
+        chunk[17] = (crc >>> 24) & 255; chunk[18] = (crc >>> 16) & 255; chunk[19] = (crc >>> 8) & 255; chunk[20] = crc & 255;
+        return chunk;
+    }
+</script>
+
+</body>
+</html>
